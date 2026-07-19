@@ -322,6 +322,19 @@
   }
   .kit-opt.sel{border-color:var(--orange); background:var(--orange-light); color:var(--orange-dark);}
   .kit-opt .kp{display:block; font-size:14px; margin-top:2px; font-family:'Baloo 2',sans-serif;}
+  .total-row{
+    display:flex; align-items:center; justify-content:space-between; background:var(--plum-light);
+    border-radius:12px; padding:12px 16px; margin-bottom:16px;
+  }
+  .total-row span:first-child{font-size:12.5px; font-weight:800; color:var(--plum);}
+  .total-amount{font-family:'Baloo 2',sans-serif; font-weight:800; font-size:19px; color:var(--plum);}
+  .form-status{
+    display:none; border-radius:12px; padding:12px 14px; font-size:13px; font-weight:700;
+    line-height:1.5; margin:12px 0 0;
+  }
+  .form-status.ok{display:block; background:#E9F6ED; color:var(--green);}
+  .form-status.err{display:block; background:#FDECEC; color:#C0392B;}
+  .form-status a{color:inherit;}
   .form-note{
     display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--green); font-weight:800;
     margin:12px 0; justify-content:center;
@@ -404,7 +417,7 @@
       <span class="price-old">S/459.60</span>
       <span class="price-new">S/329.90</span>
     </div>
-    <a href="#ofertas" class="btn">¡Quiero Mi Kit con Envío Gratis!</a>
+    <a href="#ofertas" class="btn" id="heroCtaBtn" onclick="trackCTA()">¡Quiero Mi Kit con Envío Gratis!</a>
     <p class="micro">🔒 Pagas cuando lo recibes en tu puerta · Todo el Perú 24-48h</p>
   </div>
 </section>
@@ -558,7 +571,7 @@
           <span class="new">S/189.90</span>
         </div>
         <div class="offer-unit">Ideal para probar la rutina</div>
-        <a href="#pedido" class="btn btn-outline" onclick="selectKit('1x')">Elegir Kit Básico</a>
+        <a href="#pedido" class="btn btn-outline" onclick="selectKit('1x'); trackCTA();">Elegir Kit Básico</a>
       </div>
 
       <div class="offer-card featured" data-kit="2x">
@@ -575,7 +588,7 @@
           <span class="new">S/329.90</span>
         </div>
         <div class="offer-unit">Rutina completa para 2 meses</div>
-        <a href="#pedido" class="btn" onclick="selectKit('2x')">Elegir Kit Ahorro</a>
+        <a href="#pedido" class="btn" onclick="selectKit('2x'); trackCTA();">Elegir Kit Ahorro</a>
       </div>
 
       <div class="offer-card" data-kit="3x">
@@ -591,7 +604,7 @@
           <span class="new">S/449.90</span>
         </div>
         <div class="offer-unit">💡 Mejor precio por unidad</div>
-        <a href="#pedido" class="btn btn-outline" onclick="selectKit('3x')">Elegir Kit Familia</a>
+        <a href="#pedido" class="btn btn-outline" onclick="selectKit('3x'); trackCTA();">Elegir Kit Familia</a>
       </div>
     </div>
   </div>
@@ -710,30 +723,40 @@
         <div class="kit-opt" data-kit="3x" onclick="selectKit('3x')">Familia<span class="kp">S/449.90</span></div>
       </div>
 
-      <form id="order-form-el" onsubmit="return handleOrderSubmit(event)">
+      <div class="total-row">
+        <span>Total a pagar contraentrega</span>
+        <span class="total-amount" id="totalAmount">S/329.90</span>
+      </div>
+
+      <form id="orderForm" onsubmit="return handleOrderSubmit(event)">
         <div class="field">
           <label>Nombre completo</label>
-          <input type="text" name="nombre" placeholder="Ej. María Fernández" required>
+          <input type="text" id="nombre" name="nombre" placeholder="Ej. María Fernández" required>
         </div>
         <div class="field">
           <label>Celular (WhatsApp)</label>
-          <input type="tel" name="celular" placeholder="Ej. 987 654 321" required pattern="[0-9 ]{7,12}">
+          <input type="tel" id="celular" name="celular" placeholder="Ej. 987 654 321" required pattern="[0-9 ]{7,12}">
         </div>
         <div class="field">
           <label>Distrito</label>
-          <input type="text" name="distrito" placeholder="Ej. José Leonardo Ortiz" required>
+          <input type="text" id="distrito" name="distrito" placeholder="Ej. José Leonardo Ortiz" required>
         </div>
         <div class="field">
           <label>Provincia</label>
-          <input type="text" name="provincia" placeholder="Ej. Chiclayo" required>
+          <input type="text" id="provincia" name="provincia" placeholder="Ej. Chiclayo" required>
         </div>
         <div class="field">
           <label>Dirección completa</label>
-          <input type="text" name="direccion" placeholder="Calle, número, referencia" required>
+          <input type="text" id="direccion" name="direccion" placeholder="Calle, número" required>
+        </div>
+        <div class="field">
+          <label>Referencia <span style="font-weight:600; color:var(--ink-soft);">(opcional)</span></label>
+          <input type="text" id="referencia" name="referencia" placeholder="Ej. Frente al parque, casa celeste">
         </div>
         <input type="hidden" name="kit" id="kit-hidden" value="2x">
-        <button type="submit" class="btn">Pedir Ahora y Pagar al Recibir</button>
+        <button type="submit" class="btn" id="submitBtn">Pedir Ahora y Pagar al Recibir</button>
       </form>
+      <div id="formStatus" class="form-status"></div>
       <div class="form-note">🔒 Tus datos están seguros · Sin pago por adelantado</div>
     </div>
   </div>
@@ -751,7 +774,7 @@
     <div class="p1">S/459.60</div>
     <div class="p2">S/329.90</div>
   </div>
-  <a href="#pedido" class="btn">Pedir Ahora</a>
+  <a href="#pedido" class="btn" onclick="trackCTA()">Pedir Ahora</a>
 </div>
 
 <!-- ===================== EXIT POPUP ===================== -->
@@ -796,9 +819,20 @@
     }
   }
 
-  // ---------- Kit selection sync (offers <-> form) ----------
-  const kitPrices = {'1x':{old:'S/229.80', new:'S/189.90'}, '2x':{old:'S/459.60', new:'S/329.90'}, '3x':{old:'S/689.40', new:'S/449.90'}};
+  // ==== CONFIGURACIÓN: pega aquí tu URL de Google Apps Script (Paso 1 más abajo) ====
+  const ORDER_ENDPOINT = "PEGA_AQUI_TU_URL_DE_APPS_SCRIPT";
+  // ==== Tu número de WhatsApp para el fallback si falla el envío automático ====
+  const WHATSAPP_NUMBER = "51999999999"; // <-- reemplaza por tu número real (con código de país, sin +)
+
+  // ---------- Kit selection sync (offers <-> form <-> total) ----------
+  const kitPrices = {
+    '1x':{old:'S/229.80', new:'S/189.90', price:189.90, qty:1},
+    '2x':{old:'S/459.60', new:'S/329.90', price:329.90, qty:2},
+    '3x':{old:'S/689.40', new:'S/449.90', price:449.90, qty:3}
+  };
+  let currentKit = '2x';
   function selectKit(kit){
+    currentKit = kit;
     document.getElementById('kit-hidden').value = kit;
     document.querySelectorAll('.kit-opt').forEach(o=>{
       o.classList.toggle('sel', o.dataset.kit === kit);
@@ -807,21 +841,108 @@
     if(p){
       document.querySelector('.sticky-bottom .p1').textContent = p.old;
       document.querySelector('.sticky-bottom .p2').textContent = p.new;
+      const totalEl = document.getElementById('totalAmount');
+      if(totalEl) totalEl.textContent = p.new;
     }
   }
 
-  // ---------- Order form submit ----------
-  // NOTE FOR SHOPIFY / CARTPANDA: reemplaza este handler por tu integración real
-  // (Shopify: crea el pedido via Buy Button / Cart API; CartPanda: apunta el <form>
-  // action a tu endpoint de checkout con COD, o usa su script de captura de leads).
-  function handleOrderSubmit(e){
+  // ---------- Tracking: dispara InitiateCheckout al hacer clic en cualquier CTA ----------
+  // Requiere que el Meta Pixel base ya esté instalado en el <head> (fbq definido).
+  // Si no está instalado, esta función simplemente no hace nada (no rompe la página).
+  function trackCTA(){
+    if (typeof fbq === 'function') {
+      const p = kitPrices[currentKit] || kitPrices['2x'];
+      fbq('track', 'InitiateCheckout', {
+        content_name: 'Kit PielClara Antimanchas',
+        content_category: 'Belleza y Cuidado Personal',
+        value: p.price,
+        currency: 'PEN'
+      });
+    }
+  }
+
+  // ---------- Captura de UTMs (persisten en localStorage entre páginas) ----------
+  function getUTMs(){
+    const params = new URLSearchParams(window.location.search);
+    const keys = ['utm_source','utm_medium','utm_campaign','utm_term','utm_content'];
+    const stored = JSON.parse(localStorage.getItem('pc_utms') || '{}');
+    let hasNew = false;
+    keys.forEach(k => {
+      if(params.get(k)){ stored[k] = params.get(k); hasNew = true; }
+    });
+    if(hasNew) localStorage.setItem('pc_utms', JSON.stringify(stored));
+    keys.forEach(k => { if(!stored[k]) stored[k] = ''; });
+    return stored;
+  }
+  const utms = getUTMs();
+
+  // ---------- Order form submit: envía el pedido a tu Google Sheet ----------
+  async function handleOrderSubmit(e){
     e.preventDefault();
     const form = e.target;
-    const nombre = form.nombre.value.trim();
-    if(!nombre){ return false; }
-    alert('¡Gracias ' + nombre.split(' ')[0] + '! Tu pedido fue registrado. Te contactaremos por WhatsApp para confirmar la entrega y el pago contra entrega.');
-    form.reset();
-    selectKit('2x');
+    const submitBtn = document.getElementById('submitBtn');
+    const formStatus = document.getElementById('formStatus');
+    const p = kitPrices[currentKit] || kitPrices['2x'];
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Enviando...';
+    formStatus.className = 'form-status';
+    formStatus.textContent = '';
+
+    const payload = {
+      producto: 'Kit PielClara (Dr. Melaxin PeelShot + Toplux Vitamina C)',
+      nombre: document.getElementById('nombre').value.trim(),
+      telefono: document.getElementById('celular').value.trim(),
+      distrito: document.getElementById('distrito').value.trim(),
+      provincia: document.getElementById('provincia').value.trim(),
+      direccion: document.getElementById('direccion').value.trim(),
+      referencia: document.getElementById('referencia').value.trim(),
+      kit: currentKit,
+      unidades: p.qty,
+      total: p.price,
+      utm_source: utms.utm_source,
+      utm_medium: utms.utm_medium,
+      utm_campaign: utms.utm_campaign,
+      utm_term: utms.utm_term,
+      utm_content: utms.utm_content,
+      pagina: window.location.href,
+      fecha: new Date().toISOString()
+    };
+
+    try {
+      if (!ORDER_ENDPOINT || ORDER_ENDPOINT.startsWith('PEGA_AQUI')) {
+        throw new Error('ORDER_ENDPOINT no configurado');
+      }
+      await fetch(ORDER_ENDPOINT, {
+        method: 'POST',
+        mode: 'no-cors', // Apps Script no responde con headers CORS; no-cors evita el bloqueo del navegador
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+      });
+
+      formStatus.className = 'form-status ok';
+      formStatus.textContent = '¡Pedido recibido! Te contactaremos al ' + payload.telefono + ' para confirmar la entrega y el pago contraentrega.';
+
+      if (typeof fbq === 'function') {
+        fbq('track', 'Purchase', {
+          value: payload.total,
+          currency: 'PEN',
+          content_name: payload.producto,
+          num_items: payload.unidades
+        });
+      }
+
+      form.reset();
+      selectKit('2x');
+
+    } catch (err) {
+      console.error('Error en el envío:', err);
+      formStatus.className = 'form-status err';
+      formStatus.innerHTML = 'No pudimos enviar tu pedido automáticamente. <br><br>👉 <a href="https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent('Hola, tuve un problema en la web y quiero confirmar mi pedido del Kit PielClara con Pago Contraentrega') + '" target="_blank">Haz clic aquí para escribir por WhatsApp</a> y coordinar tu pedido.';
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Pedir Ahora y Pagar al Recibir';
+    }
     return false;
   }
 
