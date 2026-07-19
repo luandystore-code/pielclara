@@ -788,9 +788,6 @@
   </div>
 </div>
 
-<!-- iframe oculto: recibe la respuesta del formulario de pedido sin recargar la página -->
-<iframe name="hiddenOrderFrame" id="hiddenOrderFrame" style="display:none;" title="envio-pedido"></iframe>
-
 <script>
   // ---------- Countdown timer (resets daily at 23:59) ----------
   function updateTimer(){
@@ -880,12 +877,7 @@
   const utms = getUTMs();
 
   // ---------- Order form submit: envía el pedido a tu Google Sheet ----------
-  // NOTA TÉCNICA: usamos un <form> real apuntando a un <iframe> oculto en vez de fetch().
-  // fetch() con mode:'no-cors' hacia Apps Script es poco confiable: la redirección interna
-  // de script.google.com -> script.googleusercontent.com puede degradar el POST a un GET,
-  // lo que dispara doGet() en vez de doPost() y nada se guarda, sin ningún error visible.
-  // El envío vía formulario + iframe es la técnica estándar y confiable para este caso.
-  function handleOrderSubmit(e){
+  async function handleOrderSubmit(e){
     e.preventDefault();
     const form = e.target;
     const submitBtn = document.getElementById('submitBtn');
@@ -919,33 +911,16 @@
       utm_campaign: utms.utm_campaign,
       utm_term: utms.utm_term,
       utm_content: utms.utm_content,
-      pagina: window.location.href,
-      fecha: new Date().toISOString()
+      pagina: window.location.href
     };
 
-    // Construye un formulario invisible con un input por cada campo y lo envía
-    // al iframe oculto — esto es un POST real de application/x-www-form-urlencoded,
-    // que Apps Script recibe en e.parameter (ver google-apps-script.gs).
-    const hiddenForm = document.createElement('form');
-    hiddenForm.method = 'POST';
-    hiddenForm.action = ORDER_ENDPOINT;
-    hiddenForm.target = 'hiddenOrderFrame';
-    hiddenForm.style.display = 'none';
-    Object.keys(payload).forEach(key => {
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = key;
-      input.value = payload[key] === undefined || payload[key] === null ? '' : payload[key];
-      hiddenForm.appendChild(input);
-    });
-    document.body.appendChild(hiddenForm);
-
-    const iframe = document.getElementById('hiddenOrderFrame');
-    let finished = false;
-    function onFinish(){
-      if(finished) return;
-      finished = true;
-      iframe.removeEventListener('load', onFinish);
+    try {
+      await fetch(ORDER_ENDPOINT, {
+        method: 'POST',
+        mode: 'no-cors', // Apps Script no devuelve headers CORS; no-cors evita que el navegador bloquee el envío
+        headers: { 'Content-Type': 'text/plain' }, // texto plano para que el body llegue intacto a JSON.parse en Apps Script
+        body: JSON.stringify(payload)
+      });
 
       formStatus.className = 'form-status ok';
       formStatus.textContent = '¡Pedido recibido! Te contactaremos al ' + payload.telefono + ' para confirmar la entrega y el pago contraentrega.';
@@ -961,17 +936,15 @@
 
       form.reset();
       selectKit('2x');
+
+    } catch (err) {
+      console.error('Error en el envío:', err);
+      formStatus.className = 'form-status err';
+      formStatus.innerHTML = 'No pudimos enviar tu pedido automáticamente. <br><br>👉 <a href="https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent('Hola, tuve un problema en la web y quiero confirmar mi pedido del Kit PielClara con Pago Contraentrega') + '" target="_blank">Haz clic aquí para escribir por WhatsApp</a> y coordinar tu pedido.';
+    } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Pedir Ahora y Pagar al Recibir';
-      hiddenForm.remove();
     }
-
-    // El evento 'load' del iframe confirma que Apps Script respondió.
-    // Como es una respuesta cross-origin no podemos leer si fue éxito o error real,
-    // así que además ponemos un margen de seguridad de 6s por si el evento no dispara.
-    iframe.addEventListener('load', onFinish);
-    hiddenForm.submit();
-    setTimeout(onFinish, 6000);
     return false;
   }
 

@@ -1,30 +1,44 @@
 /**
- * PielClara — Recibe pedidos del formulario de la landing y los guarda en Google Sheets.
+ * PIELCLARA — RECEPTOR DE PEDIDOS
+ * Guarda cada pedido del formulario en Google Sheets y avisa por WhatsApp al instante.
  *
  * INSTALACIÓN (una sola vez):
- * 1. Crea (o abre) tu Google Sheet donde quieres que caigan los pedidos.
- * 2. Menú Extensiones -> Apps Script.
+ * 1. Abre el Google Sheet con ID 1hHHK0CdsrIm2bZnWsXadlTO2uKF8OFBgyUkJeeg8Qeg
+ *    y confirma que exista una pestaña llamada exactamente "Pedidos".
+ * 2. Menú Extensiones -> Apps Script (puede ser desde esa hoja o un proyecto standalone,
+ *    ya no importa porque este script abre la hoja explícitamente por su ID).
  * 3. Borra todo el contenido del editor y pega este archivo completo.
- * 4. Guarda (icono de disco o Ctrl+S). Ponle un nombre al proyecto, ej. "PielClara Pedidos".
- * 5. Click en "Implementar" (Deploy) -> "Nueva implementación" (New deployment).
- *    - Tipo: "Aplicación web" (Web app)
- *    - Descripción: lo que quieras
- *    - Ejecutar como: "Yo" (tu cuenta)
- *    - Quién tiene acceso: "Cualquier usuario" (Anyone) — OBLIGATORIO, si no la landing no podrá escribir
- * 6. Click "Implementar". Google te pedirá autorizar permisos la primera vez (acepta).
- * 7. Copia la URL que te da (termina en /exec). Esa es tu ORDER_ENDPOINT.
- * 8. Pégala en el <script> de tu landing, en la constante ORDER_ENDPOINT.
+ * 4. Guarda (Ctrl+S). Ponle nombre al proyecto, ej. "PielClara Pedidos".
+ * 5. Implementar -> Nueva implementación:
+ *    - Tipo: Aplicación web
+ *    - Ejecutar como: Yo (tu cuenta)
+ *    - Quién tiene acceso: Cualquier usuario (OBLIGATORIO)
+ * 6. Autoriza los permisos que te pida Google la primera vez.
+ * 7. Copia la URL que termina en /exec y pégala en ORDER_ENDPOINT dentro del <script> de la landing.
  *
- * Si luego editas este script, cada vez que hagas cambios debes volver a
- * "Implementar" -> "Gestionar implementaciones" -> ícono de lápiz -> Versión "Nueva" -> Implementar,
- * o la URL seguirá corriendo la versión vieja del código.
+ * Si vuelves a editar este código, siempre debes ir a
+ * Implementar -> Gestionar implementaciones -> lápiz ✏️ -> Versión: Nueva -> Implementar,
+ * o la URL seguirá corriendo la versión vieja.
  */
 
-function doPost(e) {
-  try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+const CALLMEBOT_PHONE = "51949222654";
+const CALLMEBOT_APIKEY = "9223041";
+const SHEET_ID = "1hHHK0CdsrIm2bZnWsXadlTO2uKF8OFBgyUkJeeg8Qeg";
+const SHEET_NAME = "Pedidos";
 
-    // Si la hoja está vacía, crea los encabezados una sola vez, en el orden exacto pedido.
+function doPost(e) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000); // espera hasta 10s si hay otro pedido guardándose al mismo tiempo
+
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SHEET_NAME);
+
+    if (!sheet) {
+      throw new Error('No se encontró la pestaña "' + SHEET_NAME + '" en el Sheet. Revisa el nombre exacto.');
+    }
+
+    // Si la hoja está vacía, crea los encabezados una sola vez, en el orden pedido.
     if (sheet.getLastRow() === 0) {
       sheet.appendRow([
         'Número de pedido', 'Nombre del producto', 'Cantidad del producto', 'Precio total',
@@ -34,46 +48,66 @@ function doPost(e) {
       ]);
     }
 
-    // La landing envía los datos como un formulario real (application/x-www-form-urlencoded)
-    // hacia un iframe oculto, así que llegan en e.parameter, no como JSON en el body.
-    var data = e.parameter || {};
-
-    // Número de pedido correlativo: cuenta las filas ya existentes (sin contar el encabezado
-    // se compensa solo, porque lastRow ya incluye la fila de encabezado).
-    var orderNumber = sheet.getLastRow();
+    const orderNumber = Math.max(sheet.getLastRow(), 1);
+    const fechaCreacion = Utilities.formatDate(new Date(), "America/Lima", "yyyy-MM-dd HH:mm:ss");
 
     sheet.appendRow([
       orderNumber,
-      data.producto || '',
-      data.unidades || '',
-      data.total || '',
-      data.nombre || '',
-      data.direccion || '',
-      data.referencia || '',
-      data.telefono || '',
-      data.distrito || '',
-      data.provincia || '',
-      new Date(),
-      data.utm_medium || '',
-      data.utm_content || '',
-      data.utm_term || '',
-      data.pagina || ''
+      data.producto     || '',
+      data.unidades      || '',
+      data.total          || '',
+      data.nombre        || '',
+      data.direccion     || '',
+      data.referencia    || '',
+      data.telefono      || '',
+      data.distrito      || '',
+      data.provincia     || '',
+      fechaCreacion,
+      data.utm_medium    || '',
+      data.utm_content   || '',
+      data.utm_term      || '',
+      data.pagina        || ''
     ]);
 
+    data.orderNumber = orderNumber;
+    data.fechaHora = fechaCreacion;
+
+    notificarWhatsApp(data);
+
     return ContentService
-      .createTextOutput(JSON.stringify({ result: 'success', orderNumber: orderNumber }))
+      .createTextOutput(JSON.stringify({ status: "ok", orderNumber: orderNumber }))
       .setMimeType(ContentService.MimeType.JSON);
 
-  } catch (error) {
+  } catch (err) {
     return ContentService
-      .createTextOutput(JSON.stringify({ result: 'error', message: error.toString() }))
+      .createTextOutput(JSON.stringify({ status: "error", message: err.message }))
       .setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
   }
 }
 
-// Opcional: para probar que el deploy funciona abriendo la URL /exec en el navegador.
+function notificarWhatsApp(data) {
+  const mensaje =
+    "🛍️ Nuevo pedido PielClara #" + data.orderNumber + "\n" +
+    "Fecha y hora: " + data.fechaHora + "\n" +
+    "Producto: " + data.producto + "\n" +
+    "Nombre: " + data.nombre + "\n" +
+    "Teléfono: " + data.telefono + "\n" +
+    "Distrito: " + data.distrito + " - " + (data.provincia || '') + "\n" +
+    "Dirección: " + data.direccion + (data.referencia ? " (Ref: " + data.referencia + ")" : "") + "\n" +
+    "Unidades: " + data.unidades + "\n" +
+    "Total a cobrar (Pago Contraentrega): S/" + data.total + "\n" +
+    "Origen: " + (data.utm_medium || "directo") + " / " + (data.utm_content || "-");
+
+  const url = "https://api.callmebot.com/whatsapp.php"
+    + "?phone=" + encodeURIComponent(CALLMEBOT_PHONE)
+    + "&text=" + encodeURIComponent(mensaje)
+    + "&apikey=" + encodeURIComponent(CALLMEBOT_APIKEY);
+
+  UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+}
+
 function doGet(e) {
-  return ContentService
-    .createTextOutput('El endpoint de pedidos PielClara está activo ✅')
-    .setMimeType(ContentService.MimeType.TEXT);
+  return ContentService.createTextOutput("¡Hola! El endpoint de pedidos PielClara está conectado y funcionando ✅");
 }
