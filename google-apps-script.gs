@@ -24,41 +24,42 @@ function doPost(e) {
   try {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
 
-    // Si la hoja está vacía, crea los encabezados una sola vez.
+    // Si la hoja está vacía, crea los encabezados una sola vez, en el orden exacto pedido.
     if (sheet.getLastRow() === 0) {
       sheet.appendRow([
-        'Fecha registro', 'Producto', 'Nombre', 'Teléfono', 'Distrito', 'Provincia',
-        'Dirección', 'Referencia', 'Kit', 'Unidades', 'Total (S/)',
-        'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
-        'Página', 'Fecha del pedido'
+        'Número de pedido', 'Nombre del producto', 'Cantidad del producto', 'Precio total',
+        '* Nombre y apellido', 'Dirección', 'Referencia', 'Número de teléfono',
+        'Distrito', 'Provincia', '* Fecha de creación',
+        'UTM medium', 'UTM content', 'UTM term', 'Pagina'
       ]);
     }
 
     var data = JSON.parse(e.postData.contents);
 
+    // Número de pedido correlativo: cuenta las filas ya existentes (sin contar el encabezado
+    // se compensa solo, porque lastRow ya incluye la fila de encabezado).
+    var orderNumber = sheet.getLastRow();
+
     sheet.appendRow([
-      new Date(),
+      orderNumber,
       data.producto || '',
+      data.unidades || '',
+      data.total || '',
       data.nombre || '',
+      data.direccion || '',
+      data.referencia || '',
       data.telefono || '',
       data.distrito || '',
       data.provincia || '',
-      data.direccion || '',
-      data.referencia || '',
-      data.kit || '',
-      data.unidades || '',
-      data.total || '',
-      data.utm_source || '',
+      new Date(),
       data.utm_medium || '',
-      data.utm_campaign || '',
-      data.utm_term || '',
       data.utm_content || '',
-      data.pagina || '',
-      data.fecha || ''
+      data.utm_term || '',
+      data.pagina || ''
     ]);
 
     return ContentService
-      .createTextOutput(JSON.stringify({ result: 'success' }))
+      .createTextOutput(JSON.stringify({ result: 'success', orderNumber: orderNumber }))
       .setMimeType(ContentService.MimeType.JSON);
 
   } catch (error) {
