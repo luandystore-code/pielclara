@@ -34,7 +34,9 @@ function doPost(e) {
       ]);
     }
 
-    var data = JSON.parse(e.postData.contents);
+    // La landing envía los datos como un formulario real (application/x-www-form-urlencoded)
+    // hacia un iframe oculto, así que llegan en e.parameter, no como JSON en el body.
+    var data = e.parameter || {};
 
     // Número de pedido correlativo: cuenta las filas ya existentes (sin contar el encabezado
     // se compensa solo, porque lastRow ya incluye la fila de encabezado).
