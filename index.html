@@ -969,13 +969,15 @@ src="https://www.facebook.com/tr?id=818885113071784&ev=PageView&noscript=1"
   const stickyBar = document.getElementById('sticky-bar');
   const heroCtaBtn = document.getElementById('heroCtaBtn');
   const orderSection = document.getElementById('pedido');
+  const offersSection = document.getElementById('ofertas');
   stickyBar.style.transition = 'transform .3s ease';
   stickyBar.style.transform = 'translateY(120%)'; // oculta al inicio, antes de pasar el hero
 
   let pastHero = false;
   let inPedido = false;
+  let inOfertas = false;
   function refreshStickyVisibility(){
-    const shouldShow = pastHero && !inPedido && !userInteractingWithOrder;
+    const shouldShow = pastHero && !inPedido && !inOfertas && !userInteractingWithOrder;
     stickyBar.style.transform = shouldShow ? 'translateY(0)' : 'translateY(120%)';
   }
   if (heroCtaBtn && 'IntersectionObserver' in window) {
@@ -996,6 +998,15 @@ src="https://www.facebook.com/tr?id=818885113071784&ev=PageView&noscript=1"
       });
     }, {threshold:0.15});
     pedidoObserver.observe(orderSection);
+  }
+  if (offersSection && 'IntersectionObserver' in window) {
+    const offersObserver = new IntersectionObserver((entries)=>{
+      entries.forEach(entry=>{
+        inOfertas = entry.isIntersecting;
+        refreshStickyVisibility();
+      });
+    }, {threshold:0.15});
+    offersObserver.observe(offersSection);
   }
 
   // ---------- Exit intent popup ----------
