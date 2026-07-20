@@ -975,7 +975,8 @@ src="https://www.facebook.com/tr?id=818885113071784&ev=PageView&noscript=1"
   let pastHero = false;
   let inPedido = false;
   function refreshStickyVisibility(){
-    stickyBar.style.transform = (pastHero && !inPedido) ? 'translateY(0)' : 'translateY(120%)';
+    const shouldShow = pastHero && !inPedido && !userInteractingWithOrder;
+    stickyBar.style.transform = shouldShow ? 'translateY(0)' : 'translateY(120%)';
   }
   if (heroCtaBtn && 'IntersectionObserver' in window) {
     const heroObserver = new IntersectionObserver((entries)=>{
@@ -1004,8 +1005,8 @@ src="https://www.facebook.com/tr?id=818885113071784&ev=PageView&noscript=1"
   const orderFormEl = document.getElementById('orderForm');
   [kitSelectEl, orderFormEl].forEach(el=>{
     if(!el) return;
-    el.addEventListener('focusin', ()=>{ userInteractingWithOrder = true; });
-    el.addEventListener('click', ()=>{ userInteractingWithOrder = true; });
+    el.addEventListener('focusin', ()=>{ userInteractingWithOrder = true; refreshStickyVisibility(); });
+    el.addEventListener('click', ()=>{ userInteractingWithOrder = true; refreshStickyVisibility(); });
   });
 
   let popupShown = false;
