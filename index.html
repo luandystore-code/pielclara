@@ -7,6 +7,23 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '818885113071784');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=818885113071784&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
 <style>
   :root{
     --cream:#FFF8F2;
@@ -948,21 +965,52 @@
     return false;
   }
 
-  // ---------- Sticky bottom bar: hide near footer form ----------
+  // ---------- Sticky bottom bar: aparece después de pasar el CTA del hero, se oculta en el formulario ----------
   const stickyBar = document.getElementById('sticky-bar');
+  const heroCtaBtn = document.getElementById('heroCtaBtn');
   const orderSection = document.getElementById('pedido');
-  const obs = new IntersectionObserver((entries)=>{
-    entries.forEach(entry=>{
-      stickyBar.style.transform = entry.isIntersecting ? 'translateY(120%)' : 'translateY(0)';
-    });
-  }, {threshold:0.15});
-  if(orderSection) obs.observe(orderSection);
   stickyBar.style.transition = 'transform .3s ease';
+  stickyBar.style.transform = 'translateY(120%)'; // oculta al inicio, antes de pasar el hero
+
+  let pastHero = false;
+  let inPedido = false;
+  function refreshStickyVisibility(){
+    stickyBar.style.transform = (pastHero && !inPedido) ? 'translateY(0)' : 'translateY(120%)';
+  }
+  if (heroCtaBtn && 'IntersectionObserver' in window) {
+    const heroObserver = new IntersectionObserver((entries)=>{
+      entries.forEach(entry=>{
+        // pastHero se activa cuando el botón del hero ya salió de pantalla hacia arriba
+        pastHero = !entry.isIntersecting && entry.boundingClientRect.top < 0;
+        refreshStickyVisibility();
+      });
+    }, {threshold:0});
+    heroObserver.observe(heroCtaBtn);
+  }
+  if (orderSection && 'IntersectionObserver' in window) {
+    const pedidoObserver = new IntersectionObserver((entries)=>{
+      entries.forEach(entry=>{
+        inPedido = entry.isIntersecting;
+        refreshStickyVisibility();
+      });
+    }, {threshold:0.15});
+    pedidoObserver.observe(orderSection);
+  }
 
   // ---------- Exit intent popup ----------
+  // No debe interrumpir mientras la persona está eligiendo cantidades o llenando el formulario.
+  let userInteractingWithOrder = false;
+  const kitSelectEl = document.querySelector('.kit-select');
+  const orderFormEl = document.getElementById('orderForm');
+  [kitSelectEl, orderFormEl].forEach(el=>{
+    if(!el) return;
+    el.addEventListener('focusin', ()=>{ userInteractingWithOrder = true; });
+    el.addEventListener('click', ()=>{ userInteractingWithOrder = true; });
+  });
+
   let popupShown = false;
   function showPopup(){
-    if(popupShown) return;
+    if(popupShown || userInteractingWithOrder) return;
     popupShown = true;
     document.getElementById('exit-overlay').classList.add('show');
   }
